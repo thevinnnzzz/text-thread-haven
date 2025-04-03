@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,12 @@ interface AuthFormData {
   password: string;
 }
 
-const AuthPage = ({ mode }: { mode: "login" | "register" }) => {
+interface AuthPageProps {
+  mode: "login" | "register";
+  onLogin?: () => void;  // Make onLogin optional
+}
+
+const AuthPage = ({ mode, onLogin }: AuthPageProps) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<AuthFormData>({
     email: "",
@@ -43,6 +47,9 @@ const AuthPage = ({ mode }: { mode: "login" | "register" }) => {
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
+      if (onLogin && mode === "login") {
+        onLogin();
+      }
       navigate("/");
     }, 1500);
   };
