@@ -23,7 +23,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "light", // Changed default theme to light
   storageKey = "bancaforum-theme",
   ...props
 }: ThemeProviderProps) {

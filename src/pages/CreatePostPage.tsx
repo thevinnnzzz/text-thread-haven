@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Loader2 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 const CreatePostPage = () => {
   const navigate = useNavigate();
@@ -33,9 +34,11 @@ const CreatePostPage = () => {
     // Simulate API call to create post
     setTimeout(() => {
       setIsSubmitting(false);
+      toast({
+        description: "Post created successfully!",
+        duration: 3000,
+      });
       navigate("/"); // Redirect to home page after successful creation
-      // In a real app, you'd navigate to the newly created post
-      // navigate(`/post/${newPostId}`);
     }, 1500);
   };
 
@@ -44,7 +47,7 @@ const CreatePostPage = () => {
       <div className="mb-6">
         <Button
           variant="ghost"
-          className="flex items-center text-forum-600 p-0 hover:bg-transparent hover:text-forum-700"
+          className="flex items-center text-blue-600 p-0 hover:bg-transparent hover:text-blue-700"
           onClick={() => navigate(-1)}
         >
           <ChevronLeft className="h-4 w-4 mr-1" />
@@ -52,15 +55,15 @@ const CreatePostPage = () => {
         </Button>
       </div>
       
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Create Post</CardTitle>
+      <Card className="max-w-2xl mx-auto border border-blue-100 shadow-sm">
+        <CardHeader className="bg-blue-50 border-b border-blue-100">
+          <CardTitle className="text-blue-800">Create Post</CardTitle>
         </CardHeader>
         
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="space-y-2">
-              <label htmlFor="title" className="text-sm font-medium">
+              <label htmlFor="title" className="text-sm font-medium text-gray-700">
                 Title <span className="text-red-500">*</span>
               </label>
               <Input
@@ -68,12 +71,13 @@ const CreatePostPage = () => {
                 placeholder="Give your post a title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                className="border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="content" className="text-sm font-medium">
+              <label htmlFor="content" className="text-sm font-medium text-gray-700">
                 Content <span className="text-red-500">*</span>
               </label>
               <Textarea
@@ -81,7 +85,7 @@ const CreatePostPage = () => {
                 placeholder="Share your thoughts..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="min-h-[200px] resize-y"
+                className="min-h-[200px] resize-y border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
@@ -93,16 +97,21 @@ const CreatePostPage = () => {
             )}
           </CardContent>
           
-          <CardFooter className="flex justify-end space-x-2">
+          <CardFooter className="flex justify-end space-x-2 bg-gray-50 border-t border-blue-100">
             <Button
               type="button"
               variant="outline"
               onClick={() => navigate("/")}
               disabled={isSubmitting}
+              className="border-blue-200 text-blue-700 hover:bg-blue-50"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

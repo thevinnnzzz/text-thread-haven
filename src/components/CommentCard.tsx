@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { ThumbsUp, Reply } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
 
 interface CommentCardProps {
   comment: {
@@ -31,18 +32,24 @@ const CommentCard = ({ comment, isLiked = false, onLike, onReply }: CommentCardP
     const newLikedState = !liked;
     setLiked(newLikedState);
     setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
+    
+    toast({
+      description: newLikedState ? "Comment liked!" : "Comment unliked",
+      duration: 1500,
+    });
+    
     if (onLike) {
       onLike(comment.id, newLikedState);
     }
   };
 
   return (
-    <div className="py-4 border-b border-gray-100 last:border-b-0">
+    <div className="py-4 border-b border-blue-100 last:border-b-0">
       <div className="flex gap-3">
         <Link to={`/user/${comment.author.id}`}>
           <Avatar className="h-8 w-8">
             <AvatarImage src={comment.author.avatar_url} />
-            <AvatarFallback className="bg-forum-100 text-forum-700">
+            <AvatarFallback className="bg-blue-100 text-blue-700">
               {comment.author.username.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -50,7 +57,7 @@ const CommentCard = ({ comment, isLiked = false, onLike, onReply }: CommentCardP
         
         <div className="flex-1">
           <div className="flex items-center mb-1">
-            <Link to={`/user/${comment.author.id}`} className="font-medium text-sm text-gray-900 mr-2">
+            <Link to={`/user/${comment.author.id}`} className="font-medium text-sm text-gray-900 mr-2 hover:text-blue-700">
               {comment.author.username}
             </Link>
             <span className="text-xs text-gray-500">
@@ -66,7 +73,7 @@ const CommentCard = ({ comment, isLiked = false, onLike, onReply }: CommentCardP
             <Button 
               variant="ghost" 
               size="sm" 
-              className={`px-2 py-1 h-auto text-xs flex items-center ${liked ? 'text-forum-600' : 'text-gray-600'}`}
+              className={`px-2 py-1 h-auto text-xs flex items-center ${liked ? 'text-blue-600' : 'text-gray-600'} hover:bg-blue-50`}
               onClick={handleLike}
             >
               <ThumbsUp className="h-3 w-3 mr-1" />
@@ -76,7 +83,7 @@ const CommentCard = ({ comment, isLiked = false, onLike, onReply }: CommentCardP
             <Button 
               variant="ghost" 
               size="sm" 
-              className="px-2 py-1 h-auto text-xs flex items-center"
+              className="px-2 py-1 h-auto text-xs flex items-center hover:bg-blue-50"
               onClick={() => onReply && onReply(comment.id)}
             >
               <Reply className="h-3 w-3 mr-1" />

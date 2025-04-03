@@ -1,69 +1,35 @@
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
-import { ThumbsUp, MessageSquare, Share2, ChevronLeft, Loader2 } from "lucide-react";
+import { ThumbsUp, MessageSquare, Share2, ChevronLeft, Loader2, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import CommentCard from "@/components/CommentCard";
+import { toast } from "@/components/ui/use-toast";
 
-// Mock data
-const MOCK_POST = {
-  id: "1",
-  title: "Welcome to BancaForum! Share your thoughts and ideas.",
-  content: "This is a community for discussion and knowledge sharing. Let's build a great community together! Feel free to create your first post and start engaging with others.\n\nBancaForum is designed to be a place where everyone can share their thoughts, ask questions, and engage in meaningful discussions. We believe in the power of community-driven content and aim to create a platform that fosters respectful and constructive dialogue.\n\nJoin us in making this a vibrant space for exchanging ideas!",
-  created_at: new Date(Date.now() - 3600000).toISOString(),
-  likes_count: 42,
-  comments_count: 13,
+// Empty post data structure
+const EMPTY_POST = {
+  id: "",
+  title: "",
+  content: "",
+  created_at: new Date().toISOString(),
+  likes_count: 0,
+  comments_count: 0,
   author: {
-    id: "1",
-    username: "admin",
+    id: "",
+    username: "",
     avatar_url: undefined
   }
 };
 
-const MOCK_COMMENTS = [
-  {
-    id: "1",
-    content: "This is exactly what I've been looking for! A clean, focused discussion platform without all the noise.",
-    created_at: new Date(Date.now() - 1800000).toISOString(),
-    likes_count: 8,
-    author: {
-      id: "2",
-      username: "early_adopter",
-      avatar_url: undefined
-    }
-  },
-  {
-    id: "2",
-    content: "I'm excited to see how this community grows. The focus on text-based discussions is refreshing.",
-    created_at: new Date(Date.now() - 3000000).toISOString(),
-    likes_count: 5,
-    author: {
-      id: "3",
-      username: "forum_enthusiast",
-      avatar_url: undefined
-    }
-  },
-  {
-    id: "3",
-    content: "Great initiative! I hope we can have some really thoughtful exchanges here.",
-    created_at: new Date(Date.now() - 4000000).toISOString(),
-    likes_count: 3,
-    author: {
-      id: "4",
-      username: "thoughtful_commenter",
-      avatar_url: undefined
-    }
-  }
-];
-
 const PostDetailPage = () => {
   const { postId } = useParams<{ postId: string }>();
-  const [post, setPost] = useState<typeof MOCK_POST | null>(null);
-  const [comments, setComments] = useState<typeof MOCK_COMMENTS>([]);
+  const navigate = useNavigate();
+  const [post, setPost] = useState<typeof EMPTY_POST | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [liked, setLiked] = useState(false);
@@ -73,10 +39,9 @@ const PostDetailPage = () => {
   // Simulate loading post and comments
   useEffect(() => {
     const timer = setTimeout(() => {
-      setPost(MOCK_POST);
-      setComments(MOCK_COMMENTS);
-      setLikesCount(MOCK_POST.likes_count);
+      // For demo purposes, we'll show a "not found" state since we're starting with empty posts
       setLoading(false);
+      setPost(null);
     }, 1000);
 
     return () => clearTimeout(timer);
@@ -86,7 +51,11 @@ const PostDetailPage = () => {
     const newLikedState = !liked;
     setLiked(newLikedState);
     setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
-    // Here you would call an API to update the like status
+    
+    toast({
+      description: newLikedState ? "Post liked successfully!" : "Post unliked",
+      duration: 2000,
+    });
   };
 
   const handleCommentSubmit = () => {
@@ -111,13 +80,18 @@ const PostDetailPage = () => {
       setComments(prev => [newComment, ...prev]);
       setCommentText("");
       setSubmittingComment(false);
+      
+      toast({
+        description: "Comment added successfully!",
+        duration: 2000,
+      });
     }, 1000);
   };
 
   if (loading) {
     return (
       <div className="container-forum py-12 flex justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-forum-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -125,12 +99,18 @@ const PostDetailPage = () => {
   if (!post) {
     return (
       <div className="container-forum py-12">
-        <div className="text-center">
-          <h2 className="text-xl font-medium mb-2">Post not found</h2>
+        <div className="text-center bg-blue-50 p-8 rounded-lg border border-blue-100 max-w-md mx-auto">
+          <AlertCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+          <h2 className="text-xl font-medium mb-2 text-blue-800">Post not found</h2>
           <p className="text-gray-600 mb-4">The post you're looking for doesn't exist or has been removed.</p>
-          <Link to="/">
-            <Button>Return to Home</Button>
-          </Link>
+          <div className="flex justify-center space-x-4">
+            <Link to="/">
+              <Button className="bg-blue-600 hover:bg-blue-700">Return to Home</Button>
+            </Link>
+            <Link to="/create-post">
+              <Button variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">Create a Post</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -139,19 +119,19 @@ const PostDetailPage = () => {
   return (
     <div className="container-forum py-6">
       <div className="mb-6">
-        <Link to="/" className="inline-flex items-center text-forum-600 hover:text-forum-700">
+        <Link to="/" className="inline-flex items-center text-blue-600 hover:text-blue-700">
           <ChevronLeft className="h-4 w-4 mr-1" />
           <span>Back to posts</span>
         </Link>
       </div>
       
-      <Card className="mb-6">
+      <Card className="mb-6 border border-blue-100 shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center mb-4">
             <Link to={`/user/${post.author.id}`} className="flex items-center">
               <Avatar className="h-8 w-8 mr-3">
                 <AvatarImage src={post.author.avatar_url} />
-                <AvatarFallback className="bg-forum-200 text-forum-700">
+                <AvatarFallback className="bg-blue-100 text-blue-700">
                   {post.author.username.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -171,11 +151,11 @@ const PostDetailPage = () => {
           </div>
         </CardContent>
         
-        <CardFooter className="px-6 py-4 bg-gray-50 flex justify-between">
+        <CardFooter className="px-6 py-4 bg-blue-50 flex justify-between border-t border-blue-100">
           <div className="flex items-center space-x-4">
             <Button 
               variant="ghost" 
-              className={`flex items-center ${liked ? 'text-forum-600' : 'text-gray-600'}`}
+              className={`flex items-center ${liked ? 'text-blue-600' : 'text-gray-600'} hover:bg-blue-100`}
               onClick={handleLike}
             >
               <ThumbsUp className="h-4 w-4 mr-2" />
@@ -184,7 +164,7 @@ const PostDetailPage = () => {
             
             <Button 
               variant="ghost" 
-              className="flex items-center text-gray-600"
+              className="flex items-center text-gray-600 hover:bg-blue-100"
               onClick={() => document.getElementById('comment-box')?.focus()}
             >
               <MessageSquare className="h-4 w-4 mr-2" />
@@ -192,7 +172,16 @@ const PostDetailPage = () => {
             </Button>
           </div>
           
-          <Button variant="ghost" className="flex items-center text-gray-600">
+          <Button 
+            variant="ghost" 
+            className="flex items-center text-gray-600 hover:bg-blue-100"
+            onClick={() => {
+              toast({
+                description: "Share functionality coming soon!",
+                duration: 2000,
+              });
+            }}
+          >
             <Share2 className="h-4 w-4 mr-2" />
             <span>Share</span>
           </Button>
@@ -200,13 +189,13 @@ const PostDetailPage = () => {
       </Card>
       
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Comments</h2>
-        <Card>
+        <h2 className="text-xl font-bold mb-4 text-blue-800">Comments</h2>
+        <Card className="border border-blue-100 shadow-sm">
           <CardContent className="p-4">
             <Textarea
               id="comment-box"
               placeholder="Add a comment..."
-              className="mb-3 resize-none"
+              className="mb-3 resize-none border-blue-200 focus:border-blue-400 focus:ring-blue-400"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
             />
@@ -214,6 +203,7 @@ const PostDetailPage = () => {
               <Button 
                 onClick={handleCommentSubmit} 
                 disabled={!commentText.trim() || submittingComment}
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 {submittingComment ? (
                   <>
@@ -231,8 +221,8 @@ const PostDetailPage = () => {
       
       <div>
         {comments.length > 0 ? (
-          <Card>
-            <CardContent className="p-0 divide-y">
+          <Card className="border border-blue-100 shadow-sm">
+            <CardContent className="p-0 divide-y divide-blue-100">
               {comments.map(comment => (
                 <div key={comment.id} className="px-4">
                   <CommentCard 
@@ -247,8 +237,8 @@ const PostDetailPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No comments yet. Be the first to share your thoughts!</p>
+          <div className="text-center py-8 bg-blue-50 rounded-lg">
+            <p className="text-blue-600">No comments yet. Be the first to share your thoughts!</p>
           </div>
         )}
       </div>
