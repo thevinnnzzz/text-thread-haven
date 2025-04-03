@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,8 @@ import CreatePostPage from "@/pages/CreatePostPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,84 @@ const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<typeof mockUser | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch posts from Supabase
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("posts")
+          .select(`
+            id, 
+            title,
+            content,
+            created_at,
+            likes_count,
+            comments_count,
+            user_id,
+            profiles:user_id (
+              id,
+              username,
+              avatar_url
+            )
+          `)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          // Transform the data to match our Post interface
+          const formattedPosts: Post[] = data.map(post => ({
+            id: post.id,
+            title: post.title,
+            content: post.content,
+            created_at: post.created_at,
+            likes_count: post.likes_count || 0,
+            comments_count: post.comments_count || 0,
+            author: {
+              id: post.profiles.id,
+              username: post.profiles.username,
+              avatar_url: post.profiles.avatar_url,
+            }
+          }));
+          
+          setPosts(formattedPosts);
+        }
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load posts. Please try again later.",
+          duration: 3000,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPosts();
+
+    // Set up real-time subscription for post updates
+    const channel = supabase
+      .channel('public:posts')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'posts' 
+      }, () => {
+        // Reload posts when any changes happen
+        fetchPosts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleLogin = () => {
     setIsLoggedIn(true);
@@ -54,8 +134,38 @@ const App = () => {
     setUser(null);
   };
 
-  const handleCreatePost = (newPost: Post) => {
-    setPosts(prevPosts => [newPost, ...prevPosts]);
+  const handleCreatePost = async (newPost: Post) => {
+    try {
+      // Save the post to Supabase
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          id: newPost.id,
+          title: newPost.title,
+          content: newPost.content,
+          user_id: newPost.author.id,
+          created_at: newPost.created_at,
+          likes_count: 0,
+          comments_count: 0
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // The post will be added to the state via the realtime subscription
+      toast({
+        description: "Post created successfully!",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error creating post:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create post. Please try again later.",
+        duration: 3000,
+      });
+    }
   };
 
   return (
@@ -69,8 +179,14 @@ const App = () => {
               <Navbar isLoggedIn={isLoggedIn} user={user} onLogout={handleLogout} />
               <main className="flex-1">
                 <Routes>
-                  <Route path="/" element={<HomePage posts={posts} />} />
-                  <Route path="/post/:postId" element={<PostDetailPage posts={posts} />} />
+                  <Route 
+                    path="/" 
+                    element={<HomePage posts={posts} isLoading={isLoading} />} 
+                  />
+                  <Route 
+                    path="/post/:postId" 
+                    element={<PostDetailPage posts={posts} />} 
+                  />
                   <Route 
                     path="/create-post" 
                     element={

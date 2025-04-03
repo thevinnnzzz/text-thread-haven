@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -9,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import CommentCard from "@/components/CommentCard";
 import { toast } from "@/components/ui/use-toast";
 import { Post } from "@/App";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PostDetailPageProps {
   posts: Post[];
@@ -32,7 +34,7 @@ const EMPTY_POST = {
 const PostDetailPage = ({ posts }: PostDetailPageProps) => {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
-  const [post, setPost] = useState<typeof EMPTY_POST | null>(null);
+  const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
@@ -40,56 +42,176 @@ const PostDetailPage = ({ posts }: PostDetailPageProps) => {
   const [likesCount, setLikesCount] = useState(0);
   const [submittingComment, setSubmittingComment] = useState(false);
 
-  // Simulate loading post and comments
+  // Fetch post data
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // For demo purposes, we'll show a "not found" state since we're starting with empty posts
-      setLoading(false);
-      setPost(null);
-    }, 1000);
+    const fetchPost = async () => {
+      setLoading(true);
+      
+      try {
+        // First check if we already have the post in our state
+        const existingPost = posts.find(p => p.id === postId);
+        
+        if (existingPost) {
+          setPost(existingPost);
+          setLikesCount(existingPost.likes_count);
+          setLoading(false);
+          return;
+        }
+        
+        // If not, fetch it from Supabase
+        const { data, error } = await supabase
+          .from("posts")
+          .select(`
+            id, 
+            title,
+            content,
+            created_at,
+            likes_count,
+            comments_count,
+            user_id,
+            profiles:user_id (
+              id,
+              username,
+              avatar_url
+            )
+          `)
+          .eq("id", postId)
+          .single();
 
-    return () => clearTimeout(timer);
-  }, [postId]);
+        if (error) {
+          throw error;
+        }
 
-  const handleLike = () => {
+        if (data) {
+          const formattedPost: Post = {
+            id: data.id,
+            title: data.title,
+            content: data.content,
+            created_at: data.created_at,
+            likes_count: data.likes_count || 0,
+            comments_count: data.comments_count || 0,
+            author: {
+              id: data.profiles.id,
+              username: data.profiles.username,
+              avatar_url: data.profiles.avatar_url,
+            }
+          };
+          
+          setPost(formattedPost);
+          setLikesCount(formattedPost.likes_count);
+        }
+      } catch (error) {
+        console.error("Error fetching post:", error);
+        setPost(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Fetch comments
+    const fetchComments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("comments")
+          .select(`
+            id,
+            content,
+            created_at,
+            user_id,
+            profiles:user_id (
+              id,
+              username,
+              avatar_url
+            )
+          `)
+          .eq("post_id", postId)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          const formattedComments = data.map(comment => ({
+            id: comment.id,
+            content: comment.content,
+            created_at: comment.created_at,
+            likes_count: 0, // We'll implement this later
+            author: {
+              id: comment.profiles.id,
+              username: comment.profiles.username,
+              avatar_url: comment.profiles.avatar_url,
+            }
+          }));
+          
+          setComments(formattedComments);
+        }
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+      }
+    };
+
+    if (postId) {
+      fetchPost();
+      fetchComments();
+    }
+  }, [postId, posts]);
+
+  const handleLike = async () => {
+    if (!post) return;
+    
     const newLikedState = !liked;
     setLiked(newLikedState);
     setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
     
+    // In a real app, you would save this to Supabase
+    // This is just a mock implementation for now
     toast({
       description: newLikedState ? "Post liked successfully!" : "Post unliked",
       duration: 2000,
     });
   };
 
-  const handleCommentSubmit = () => {
+  const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     
     setSubmittingComment(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      const newComment = {
-        id: `temp-${Date.now()}`,
-        content: commentText,
-        created_at: new Date().toISOString(),
-        likes_count: 0,
-        author: {
-          id: "current-user", // Would be the actual user ID
-          username: "current_user", // Would be the actual username
-          avatar_url: undefined
-        }
-      };
+    try {
+      // In a real app, you would save the comment to Supabase
+      // This is just a mock implementation for now
       
-      setComments(prev => [newComment, ...prev]);
-      setCommentText("");
-      setSubmittingComment(false);
-      
+      setTimeout(() => {
+        const newComment = {
+          id: `temp-${Date.now()}`,
+          content: commentText,
+          created_at: new Date().toISOString(),
+          likes_count: 0,
+          author: {
+            id: "current-user", // Would be the actual user ID
+            username: "current_user", // Would be the actual username
+            avatar_url: undefined
+          }
+        };
+        
+        setComments(prev => [newComment, ...prev]);
+        setCommentText("");
+        
+        toast({
+          description: "Comment added successfully!",
+          duration: 2000,
+        });
+      }, 1000);
+    } catch (error) {
+      console.error("Error adding comment:", error);
       toast({
-        description: "Comment added successfully!",
-        duration: 2000,
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        duration: 3000,
       });
-    }, 1000);
+    } finally {
+      setSubmittingComment(false);
+    }
   };
 
   if (loading) {

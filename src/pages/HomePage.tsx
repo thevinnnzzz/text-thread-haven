@@ -1,17 +1,17 @@
 
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PostCard from "@/components/PostCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import { Post } from "@/App";
 
 interface HomePageProps {
   posts: Post[];
+  isLoading?: boolean;
 }
 
-const HomePage = ({ posts }: HomePageProps) => {
+const HomePage = ({ posts, isLoading = false }: HomePageProps) => {
   return (
     <div className="container-forum py-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -33,7 +33,11 @@ const HomePage = ({ posts }: HomePageProps) => {
                 </Link>
               </div>
 
-              {posts.length > 0 ? (
+              {isLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+              ) : posts.length > 0 ? (
                 posts.map(post => (
                   <PostCard key={post.id} post={post} />
                 ))
