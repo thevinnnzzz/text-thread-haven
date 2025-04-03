@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Calendar, MapPin } from "lucide-react";
 import PostCard from "@/components/PostCard";
+import { Post } from "@/App";
 
 // Mock data
 const MOCK_USER = {
@@ -22,54 +23,36 @@ const MOCK_USER = {
   location: "San Francisco, CA"
 };
 
-const MOCK_POSTS = [
-  {
-    id: "1",
-    title: "Welcome to BancaForum! Share your thoughts and ideas.",
-    content: "This is a community for discussion and knowledge sharing. Let's build a great community together!",
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    likes_count: 42,
-    comments_count: 13,
-    author: {
-      id: "1",
-      username: "admin",
-      avatar_url: undefined
-    }
-  },
-  {
-    id: "4",
-    title: "How to get the most out of BancaForum",
-    content: "Here are some tips for new users to make the most of their BancaForum experience...",
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-    likes_count: 27,
-    comments_count: 8,
-    author: {
-      id: "1",
-      username: "admin",
-      avatar_url: undefined
-    }
-  }
-];
+interface UserProfilePageProps {
+  posts: Post[];
+}
 
-const UserProfilePage = () => {
+const UserProfilePage = ({ posts }: UserProfilePageProps) => {
   const { userId } = useParams<{ userId: string }>();
   const [user, setUser] = useState<typeof MOCK_USER | null>(null);
-  const [posts, setPosts] = useState<typeof MOCK_POSTS>([]);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
 
-  // Simulate loading user data
+  // Simulate loading user data and filter posts for this user
   useEffect(() => {
     const timer = setTimeout(() => {
       setUser(MOCK_USER);
-      setPosts(MOCK_POSTS);
+      
+      // Filter posts to show only those from this user
+      const filteredPosts = posts.filter(post => 
+        post.author.id === userId || 
+        (userId === "current-user" && post.author.id === "current-user")
+      );
+      
+      setUserPosts(filteredPosts);
       setFollowerCount(MOCK_USER.follower_count);
       setLoading(false);
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [userId]);
+  }, [userId, posts]);
 
   const handleFollow = () => {
     const newFollowingState = !following;
@@ -81,7 +64,7 @@ const UserProfilePage = () => {
   if (loading) {
     return (
       <div className="container-forum py-12 flex justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-forum-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -103,12 +86,12 @@ const UserProfilePage = () => {
   return (
     <div className="container-forum py-6">
       <Card className="mb-6 overflow-hidden">
-        <div className="h-32 bg-gradient-to-r from-forum-500 to-forum-700"></div>
+        <div className="h-32 bg-gradient-to-r from-blue-500 to-blue-700"></div>
         <CardContent className="pt-0">
           <div className="flex flex-col md:flex-row md:items-end -mt-12 mb-4">
             <Avatar className="h-24 w-24 border-4 border-white">
               <AvatarImage src={user.avatar_url} />
-              <AvatarFallback className="text-2xl bg-forum-200 text-forum-700">
+              <AvatarFallback className="text-2xl bg-blue-200 text-blue-700">
                 {user.username.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -122,7 +105,7 @@ const UserProfilePage = () => {
               <Button
                 onClick={handleFollow}
                 variant={following ? "outline" : "default"}
-                className={following ? "border-forum-300 text-forum-700" : ""}
+                className={following ? "border-blue-300 text-blue-700" : ""}
               >
                 {following ? "Following" : "Follow"}
               </Button>
@@ -168,8 +151,8 @@ const UserProfilePage = () => {
         </TabsList>
         
         <TabsContent value="posts" className="mt-6">
-          {posts.length > 0 ? (
-            posts.map(post => (
+          {userPosts.length > 0 ? (
+            userPosts.map(post => (
               <PostCard key={post.id} post={post} compact />
             ))
           ) : (

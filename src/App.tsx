@@ -24,9 +24,25 @@ const mockUser = {
   avatar_url: undefined,
 };
 
+// Define Post type for better type safety
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
+  author: {
+    id: string;
+    username: string;
+    avatar_url?: string;
+  };
+}
+
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<typeof mockUser | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
 
   const handleLogin = () => {
     setIsLoggedIn(true);
@@ -36,6 +52,10 @@ const App = () => {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUser(null);
+  };
+
+  const handleCreatePost = (newPost: Post) => {
+    setPosts(prevPosts => [newPost, ...prevPosts]);
   };
 
   return (
@@ -49,10 +69,21 @@ const App = () => {
               <Navbar isLoggedIn={isLoggedIn} user={user} onLogout={handleLogout} />
               <main className="flex-1">
                 <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/post/:postId" element={<PostDetailPage />} />
-                  <Route path="/create-post" element={<CreatePostPage />} />
-                  <Route path="/user/:userId" element={<UserProfilePage />} />
+                  <Route path="/" element={<HomePage posts={posts} />} />
+                  <Route path="/post/:postId" element={<PostDetailPage posts={posts} />} />
+                  <Route 
+                    path="/create-post" 
+                    element={
+                      <CreatePostPage 
+                        onPostCreated={handleCreatePost} 
+                        currentUser={user}
+                      />
+                    } 
+                  />
+                  <Route 
+                    path="/user/:userId" 
+                    element={<UserProfilePage posts={posts} />} 
+                  />
                   <Route path="/login" element={<AuthPage mode="login" onLogin={handleLogin} />} />
                   <Route path="/register" element={<AuthPage mode="register" />} />
                   <Route path="*" element={<NotFound />} />

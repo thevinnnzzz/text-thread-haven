@@ -7,8 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { v4 as uuidv4 } from "uuid";
+import { Post } from "@/App";
 
-const CreatePostPage = () => {
+interface CreatePostPageProps {
+  onPostCreated: (post: Post) => void;
+  currentUser: {
+    id: string;
+    username: string;
+    avatar_url?: string;
+  } | null;
+}
+
+const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -27,19 +38,41 @@ const CreatePostPage = () => {
       setError("Please enter content for your post");
       return;
     }
+
+    if (!currentUser) {
+      setError("You must be logged in to create a post");
+      return;
+    }
     
     setIsSubmitting(true);
     setError("");
     
+    // Create a new post object
+    const newPost: Post = {
+      id: uuidv4(),
+      title: title.trim(),
+      content: content.trim(),
+      created_at: new Date().toISOString(),
+      likes_count: 0,
+      comments_count: 0,
+      author: {
+        id: currentUser.id,
+        username: currentUser.username,
+        avatar_url: currentUser.avatar_url
+      }
+    };
+    
     // Simulate API call to create post
     setTimeout(() => {
       setIsSubmitting(false);
+      onPostCreated(newPost);
+      
       toast({
         description: "Post created successfully!",
         duration: 3000,
       });
       navigate("/"); // Redirect to home page after successful creation
-    }, 1500);
+    }, 1000);
   };
 
   return (

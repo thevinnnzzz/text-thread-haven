@@ -1,25 +1,17 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PostCard from "@/components/PostCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, PlusCircle } from "lucide-react";
+import { PlusCircle } from "lucide-react";
+import { Post } from "@/App";
 
-const HomePage = () => {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+interface HomePageProps {
+  posts: Post[];
+}
 
-  // Simulate loading posts - Empty array for now
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPosts([]);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
+const HomePage = ({ posts }: HomePageProps) => {
   return (
     <div className="container-forum py-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -41,11 +33,7 @@ const HomePage = () => {
                 </Link>
               </div>
 
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </div>
-              ) : posts.length > 0 ? (
+              {posts.length > 0 ? (
                 posts.map(post => (
                   <PostCard key={post.id} post={post} />
                 ))
