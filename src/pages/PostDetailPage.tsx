@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -9,6 +8,11 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import CommentCard from "@/components/CommentCard";
 import { toast } from "@/components/ui/use-toast";
+import { Post } from "@/App";
+
+interface PostDetailPageProps {
+  posts: Post[];
+}
 
 // Empty post data structure
 const EMPTY_POST = {
@@ -25,7 +29,7 @@ const EMPTY_POST = {
   }
 };
 
-const PostDetailPage = () => {
+const PostDetailPage = ({ posts }: PostDetailPageProps) => {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
   const [post, setPost] = useState<typeof EMPTY_POST | null>(null);
