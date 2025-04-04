@@ -26,7 +26,7 @@ export const seedTestUserProfile = async (userId: string) => {
     
     // Create profile if it doesn't exist
     // Using RPC to bypass RLS for development purposes
-    const { data, error } = await supabase.rpc('create_profile_for_user', {
+    const { error } = await supabase.rpc('create_profile_for_user', {
       user_id: userId,
       user_name: 'current_user',
       display_name: 'Current User',

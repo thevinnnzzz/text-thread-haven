@@ -37,7 +37,13 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
         
         if (!session) {
           console.log("No active session found");
-          setError("You must be logged in to create a post. This is a development app with mock authentication.");
+          // For development app, we'll allow posting with the mock user
+          if (currentUser) {
+            console.log("Using mock user for development:", currentUser.id);
+            setError("");
+          } else {
+            setError("Cannot create a post. No mock user available for development.");
+          }
         } else {
           console.log("Active session found for user:", session.user.id);
         }
@@ -49,7 +55,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
     };
     
     checkAuth();
-  }, []);
+  }, [currentUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +86,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
     try {
       console.log("Attempting to create post with user ID:", currentUser.id);
       
-      // Create a new post object
+      // Create a new post object for optimistic UI updates
       const newPost: Post = {
         id: uuidv4(), // This will be replaced by the database
         title: title.trim(),
@@ -102,6 +108,24 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
         user_id: currentUser.id
       });
       
+      // Insert the post into Supabase
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({
+          title: newPost.title,
+          content: newPost.content,
+          user_id: currentUser.id,
+        })
+        .select();
+        
+      if (error) {
+        console.error("Error creating post in Supabase:", error);
+        throw error;
+      }
+      
+      console.log("Post created successfully in Supabase:", data);
+      
+      // Call onPostCreated callback for optimistic UI update
       await onPostCreated(newPost);
       
       toast({
@@ -111,13 +135,13 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
       });
       
       navigate("/"); // Redirect to home page after successful creation
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in form submission:", error);
-      setError("Failed to create post. Please try again.");
+      setError(`Failed to create post: ${error.message || 'Unknown error'}`);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create post. Please try again.",
+        description: `Failed to create post: ${error.message || 'Unknown error'}`,
       });
     } finally {
       setIsSubmitting(false);
