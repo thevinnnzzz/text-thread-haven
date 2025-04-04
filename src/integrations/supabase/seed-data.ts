@@ -8,34 +8,50 @@ import { v4 as uuidv4 } from 'uuid';
 export const seedTestUserProfile = async (userId: string) => {
   try {
     // Check if profile already exists
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error checking for existing profile:', fetchError);
+      throw fetchError;
+    }
     
     if (existingProfile) {
+      console.log('Profile already exists:', existingProfile);
       return existingProfile;
     }
     
     // Create profile if it doesn't exist
-    const { data, error } = await supabase
-      .from('profiles')
-      .insert({
-        id: userId,
-        username: 'current_user',
-        display_name: 'Current User',
-        bio: 'This is a test user for development purposes.'
-      })
-      .select()
-      .single();
+    // Using RPC to bypass RLS for development purposes
+    const { data, error } = await supabase.rpc('create_profile_for_user', {
+      user_id: userId,
+      user_name: 'current_user',
+      display_name: 'Current User',
+      user_bio: 'This is a test user for development purposes.'
+    });
       
     if (error) {
       console.error('Error seeding test user profile:', error);
       throw error;
     }
     
-    return data;
+    // Fetch the newly created profile
+    const { data: newProfile, error: newProfileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    if (newProfileError) {
+      console.error('Error fetching new profile:', newProfileError);
+      throw newProfileError;
+    }
+    
+    console.log('Created new profile:', newProfile);
+    return newProfile;
   } catch (error) {
     console.error('Error in seedTestUserProfile:', error);
     throw error;
