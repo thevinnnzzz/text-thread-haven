@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,16 +14,10 @@ import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { v4 as uuidv4 } from "uuid";
+import { seedTestUserProfile } from "@/integrations/supabase/seed-data";
 
 const queryClient = new QueryClient();
-
-// Mock user data for demonstration
-const mockUser = {
-  id: "current-user",
-  email: "user@example.com",
-  username: "current_user",
-  avatar_url: undefined,
-};
 
 // Define Post type for better type safety
 export interface Post {
@@ -43,9 +36,48 @@ export interface Post {
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<typeof mockUser | null>(null);
+  const [user, setUser] = useState<{
+    id: string;
+    email: string;
+    username: string;
+    avatar_url?: string;
+  } | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Create a proper UUID for the mock user
+  useEffect(() => {
+    const setupMockUser = async () => {
+      // In a real app, this would come from Supabase Auth
+      // For now, we'll create a proper UUID to use
+      const mockUserId = localStorage.getItem('mockUserId') || uuidv4();
+      
+      // Store the ID so it persists across refreshes
+      if (!localStorage.getItem('mockUserId')) {
+        localStorage.setItem('mockUserId', mockUserId);
+      }
+      
+      try {
+        // Ensure we have a user profile in the database
+        const profile = await seedTestUserProfile(mockUserId);
+        
+        const mockUser = {
+          id: mockUserId,
+          email: "user@example.com",
+          username: profile?.username || "current_user",
+          avatar_url: profile?.avatar_url,
+        };
+        
+        setUser(mockUser);
+        // Auto-login for development
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error("Error setting up mock user:", error);
+      }
+    };
+    
+    setupMockUser();
+  }, []);
 
   // Fetch posts from Supabase
   useEffect(() => {
@@ -127,7 +159,6 @@ const App = () => {
 
   const handleLogin = () => {
     setIsLoggedIn(true);
-    setUser(mockUser);
   };
 
   const handleLogout = () => {
@@ -137,23 +168,29 @@ const App = () => {
 
   const handleCreatePost = async (newPost: Post) => {
     try {
+      console.log("Creating post with data:", {
+        title: newPost.title,
+        content: newPost.content,
+        user_id: newPost.author.id
+      });
+      
       // Save the post to Supabase
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('posts')
         .insert({
-          id: newPost.id,
           title: newPost.title,
           content: newPost.content,
           user_id: newPost.author.id,
-          created_at: newPost.created_at,
-          likes_count: 0,
-          comments_count: 0
-        });
+        })
+        .select();
 
       if (error) {
+        console.error("Error creating post:", error);
         throw error;
       }
 
+      console.log("Post created successfully:", data);
+      
       // The post will be added to the state via the realtime subscription
       toast({
         description: "Post created successfully!",

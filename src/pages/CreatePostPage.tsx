@@ -41,38 +41,46 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
 
     if (!currentUser) {
       setError("You must be logged in to create a post");
+      toast({
+        variant: "destructive",
+        title: "Authentication error",
+        description: "You must be logged in to create a post",
+      });
       return;
     }
     
     setIsSubmitting(true);
     setError("");
     
-    // Create a new post object
-    const newPost: Post = {
-      id: uuidv4(),
-      title: title.trim(),
-      content: content.trim(),
-      created_at: new Date().toISOString(),
-      likes_count: 0,
-      comments_count: 0,
-      author: {
-        id: currentUser.id,
-        username: currentUser.username,
-        avatar_url: currentUser.avatar_url
-      }
-    };
-    
-    // Simulate API call to create post
-    setTimeout(() => {
-      setIsSubmitting(false);
-      onPostCreated(newPost);
+    try {
+      // Create a new post object
+      const newPost: Post = {
+        id: uuidv4(), // This will be replaced by the database
+        title: title.trim(),
+        content: content.trim(),
+        created_at: new Date().toISOString(),
+        likes_count: 0,
+        comments_count: 0,
+        author: {
+          id: currentUser.id,
+          username: currentUser.username,
+          avatar_url: currentUser.avatar_url
+        }
+      };
       
-      toast({
-        description: "Post created successfully!",
-        duration: 3000,
-      });
+      await onPostCreated(newPost);
       navigate("/"); // Redirect to home page after successful creation
-    }, 1000);
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      setError("Failed to create post. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create post. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
