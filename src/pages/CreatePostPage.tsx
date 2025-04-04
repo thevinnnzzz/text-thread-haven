@@ -28,6 +28,8 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [useMockUser, setUseMockUser] = useState(false);
 
   // Verify user authentication when component mounts
   useEffect(() => {
@@ -35,17 +37,22 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!session) {
+        if (session) {
+          console.log("Active session found for user:", session.user.id);
+          setAuthUser(session.user);
+          setUseMockUser(false);
+          setError("");
+        } else {
           console.log("No active session found");
           // For development app, we'll allow posting with the mock user
           if (currentUser) {
             console.log("Using mock user for development:", currentUser.id);
+            setUseMockUser(true);
             setError("");
           } else {
-            setError("Cannot create a post. No mock user available for development.");
+            setError("Please log in to create a post.");
+            setUseMockUser(false);
           }
-        } else {
-          console.log("Active session found for user:", session.user.id);
         }
       } catch (error) {
         console.error("Error checking authentication:", error);
@@ -70,12 +77,14 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
       return;
     }
 
-    if (!currentUser) {
+    const effectiveUser = authUser || (useMockUser ? currentUser : null);
+
+    if (!effectiveUser) {
       setError("You must be logged in to create a post");
       toast({
         variant: "destructive",
         title: "Authentication error",
-        description: "You must be logged in to create a post. For this demo, we're using a mock user.",
+        description: "You must be logged in to create a post.",
       });
       return;
     }
@@ -84,7 +93,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
     setError("");
     
     try {
-      console.log("Attempting to create post with user ID:", currentUser.id);
+      console.log("Attempting to create post with user ID:", effectiveUser.id);
       
       // Create a new post object for optimistic UI updates
       const newPost: Post = {
@@ -95,9 +104,9 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
         likes_count: 0,
         comments_count: 0,
         author: {
-          id: currentUser.id,
-          username: currentUser.username,
-          avatar_url: currentUser.avatar_url
+          id: effectiveUser.id,
+          username: authUser ? authUser.email.split('@')[0] : effectiveUser.username,
+          avatar_url: effectiveUser.avatar_url
         }
       };
       
@@ -105,7 +114,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
       console.log("Submitting post data:", {
         title: newPost.title,
         content: newPost.content,
-        user_id: currentUser.id
+        user_id: effectiveUser.id
       });
       
       // Insert the post into Supabase
@@ -114,7 +123,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
         .insert({
           title: newPost.title,
           content: newPost.content,
-          user_id: currentUser.id,
+          user_id: effectiveUser.id,
         })
         .select();
         
@@ -149,15 +158,37 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
   };
 
   // Render explanation alert for demo purposes
-  const renderDemoAlert = () => (
-    <Alert className="mb-6 bg-blue-50 border-blue-200">
-      <AlertTitle className="text-blue-800">Development Mode</AlertTitle>
-      <AlertDescription className="text-blue-700">
-        This forum uses a mock user for demonstration purposes. In a real application, 
-        you would need to sign in with your credentials to create posts.
-      </AlertDescription>
-    </Alert>
-  );
+  const renderDemoAlert = () => {
+    if (authUser) {
+      return (
+        <Alert className="mb-6 bg-green-50 border-green-200">
+          <AlertTitle className="text-green-800">Logged In</AlertTitle>
+          <AlertDescription className="text-green-700">
+            You are currently logged in as {authUser.email}. Your posts will be associated with your account.
+          </AlertDescription>
+        </Alert>
+      );
+    } else if (useMockUser) {
+      return (
+        <Alert className="mb-6 bg-blue-50 border-blue-200">
+          <AlertTitle className="text-blue-800">Development Mode</AlertTitle>
+          <AlertDescription className="text-blue-700">
+            This forum uses a mock user for demonstration purposes. In a real application, 
+            you would need to sign in with your credentials to create posts.
+          </AlertDescription>
+        </Alert>
+      );
+    } else {
+      return (
+        <Alert className="mb-6 bg-amber-50 border-amber-200">
+          <AlertTitle className="text-amber-800">Authentication Required</AlertTitle>
+          <AlertDescription className="text-amber-700">
+            Please log in to create posts. You can use the login button in the navigation bar.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+  };
 
   return (
     <div className="container-forum py-6">
@@ -222,9 +253,15 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
                   </div>
                 )}
 
-                {currentUser && (
+                {authUser && (
                   <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-md text-sm">
-                    You are posting as: <span className="font-medium">{currentUser.username}</span>
+                    You are posting as: <span className="font-medium">{authUser.email}</span>
+                  </div>
+                )}
+                
+                {!authUser && useMockUser && currentUser && (
+                  <div className="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded-md text-sm">
+                    You are posting as demo user: <span className="font-medium">{currentUser.username}</span>
                   </div>
                 )}
               </>
@@ -243,7 +280,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting || isCheckingAuth || !currentUser}
+              disabled={isSubmitting || isCheckingAuth || (!authUser && !useMockUser)}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isSubmitting ? (
