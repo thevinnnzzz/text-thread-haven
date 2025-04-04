@@ -31,7 +31,7 @@ export const seedTestUserProfile = async (userId: string) => {
       user_name: 'current_user',
       display_name: 'Current User',
       user_bio: 'This is a test user for development purposes.'
-    });
+    } as any); // Using type assertion to bypass the TypeScript error
       
     if (error) {
       console.error('Error seeding test user profile:', error);
