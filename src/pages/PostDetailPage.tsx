@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -78,6 +79,7 @@ const PostDetailPage = ({ posts }: PostDetailPageProps) => {
           .single();
 
         if (error) {
+          console.error("Error fetching post:", error);
           throw error;
         }
 
