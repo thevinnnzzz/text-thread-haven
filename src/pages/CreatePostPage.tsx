@@ -45,7 +45,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
         } else {
           console.log("No active session found");
           // For development app, we'll allow posting with the mock user
-          if (currentUser) {
+          if (currentUser && !process.env.NODE_ENV === 'production') {
             console.log("Using mock user for development:", currentUser.id);
             setUseMockUser(true);
             setError("");
