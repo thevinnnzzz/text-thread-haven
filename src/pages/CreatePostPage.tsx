@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
   const [authUser, setAuthUser] = useState<any>(null);
   const [useMockUser, setUseMockUser] = useState(false);
 
-  // Verify user authentication when component mounts
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -44,8 +42,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
           setError("");
         } else {
           console.log("No active session found");
-          // For development app, we'll allow posting with the mock user
-          if (currentUser && !process.env.NODE_ENV === 'production') {
+          if (currentUser && import.meta.env.MODE !== 'production') {
             console.log("Using mock user for development:", currentUser.id);
             setUseMockUser(true);
             setError("");
@@ -95,9 +92,8 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
     try {
       console.log("Attempting to create post with user ID:", effectiveUser.id);
       
-      // Create a new post object for optimistic UI updates
       const newPost: Post = {
-        id: uuidv4(), // This will be replaced by the database
+        id: uuidv4(),
         title: title.trim(),
         content: content.trim(),
         created_at: new Date().toISOString(),
@@ -110,14 +106,12 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
         }
       };
       
-      // Log the post data before submission
       console.log("Submitting post data:", {
         title: newPost.title,
         content: newPost.content,
         user_id: effectiveUser.id
       });
       
-      // Insert the post into Supabase
       const { data, error } = await supabase
         .from('posts')
         .insert({
@@ -134,7 +128,6 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
       
       console.log("Post created successfully in Supabase:", data);
       
-      // Call onPostCreated callback for optimistic UI update
       await onPostCreated(newPost);
       
       toast({
@@ -143,7 +136,7 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
         duration: 3000,
       });
       
-      navigate("/"); // Redirect to home page after successful creation
+      navigate("/");
     } catch (error: any) {
       console.error("Error in form submission:", error);
       setError(`Failed to create post: ${error.message || 'Unknown error'}`);
@@ -157,7 +150,6 @@ const CreatePostPage = ({ onPostCreated, currentUser }: CreatePostPageProps) => 
     }
   };
 
-  // Render explanation alert for demo purposes
   const renderDemoAlert = () => {
     if (authUser) {
       return (
